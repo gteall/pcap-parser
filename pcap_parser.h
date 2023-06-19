@@ -1,10 +1,9 @@
 #ifndef __PARSE_PCAP_H__
 #define __PARSE_PCAP_H__
 
-#include <string.h>
-
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <vector>
 
 #define RET_OK 0

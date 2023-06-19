@@ -4,7 +4,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #endif
-#include <memory>
+#include <string.h>
 
 #include "pcap_parser.h"
 
