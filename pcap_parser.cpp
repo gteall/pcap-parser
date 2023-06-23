@@ -1,3 +1,4 @@
+#include <_types/_uint32_t.h>
 #if 0
 #include <winsock.h>
 #else
@@ -8,8 +9,6 @@
 
 #include "pcap_parser.h"
 
-#define DEBUG 0
-
 using namespace std;
 
 string StreamId::getStrId()
@@ -18,7 +17,7 @@ string StreamId::getStrId()
     struct in_addr addr;
     char tmpSrc[8] = {0};
     char tmpDest[8] = {0};
-    UInt tmpIp = 0;
+    uint32_t tmpIp = 0;
 
     snprintf(tmpSrc, sizeof(tmpSrc), "%d", mSrcPort);
     snprintf(tmpDest, sizeof(tmpDest), "%d", mDestPort);
@@ -33,11 +32,10 @@ string StreamId::getStrId()
     return strId;
 }
 
-FramePkt::FramePkt(const char *data, UInt len, UInt index, UInt linkType)
-    : mFrameIndex(index)
+FramePkt::FramePkt(const char *data, uint32_t len, uint32_t index, uint32_t linkType) : mFrameIndex(index)
 {
     int ret = 0;
-    UInt headerLen = 0;
+    uint32_t headerLen = 0;
 
     ret = parseEthPktHeader(data, len, headerLen, linkType);
     /*
@@ -48,17 +46,14 @@ FramePkt::FramePkt(const char *data, UInt len, UInt index, UInt linkType)
                                          0x8100    802.1q
     *                0xfffa    unknown (broadcast ?)
     */
-    if (ret != RET_OK ||
-        (mFrameType != 0x800 && mFrameType != 0x8864 && mFrameType != 0x8100))
+    if (ret != RET_OK || (mFrameType != 0x800 && mFrameType != 0x8864 && mFrameType != 0x8100))
     {
-        if (0x0806 == mFrameType || 0xfffa == mFrameType ||
-            0x86dd == mFrameType)
+        if (0x0806 == mFrameType || 0xfffa == mFrameType || 0x86dd == mFrameType)
         {
             return;
         }
 
-        cout << "not ip pkt, type = " << hex << mFrameType << dec
-             << ", index = " << index << endl;
+        cout << "not ip pkt, type = " << hex << mFrameType << dec << ", index = " << index << endl;
         return;
     }
 
@@ -79,8 +74,7 @@ FramePkt::FramePkt(const char *data, UInt len, UInt index, UInt linkType)
             }
             else
             {
-                cout << "unknown pppoe type = " << hex << mP2pProtocol << dec
-                     << endl;
+                cout << "unknown pppoe type = " << hex << mP2pProtocol << dec << endl;
                 return;
             }
         }
@@ -165,11 +159,10 @@ int FramePkt::writeToFile(ofstream &of)
     return 0;
 }
 
-int FramePkt::parseEthPktHeader(const char *pBuf, UInt bufLen, UInt &headerLen,
-                                UInt linkType)
+int FramePkt::parseEthPktHeader(const char *pBuf, uint32_t bufLen, uint32_t &headerLen, uint32_t linkType)
 {
-    UInt EthPktHeaderLen = 0;
-    UShort usFrameType = 0;
+    uint32_t EthPktHeaderLen = 0;
+    uint16_t usFrameType = 0;
 
     if (linkType == 113)
     {
@@ -196,11 +189,10 @@ int FramePkt::parseEthPktHeader(const char *pBuf, UInt bufLen, UInt &headerLen,
     return RET_OK;
 }
 
-int FramePkt::parsePPPoEPktHeader(const char *pBuf, UInt bufLen,
-                                  UInt &headerLen)
+int FramePkt::parsePPPoEPktHeader(const char *pBuf, uint32_t bufLen, uint32_t &headerLen)
 {
-    const UInt PPPoEPktHeaderLen = 8;
-    UShort usPPPoEType = 0;
+    const uint32_t PPPoEPktHeaderLen = 8;
+    uint16_t usPPPoEType = 0;
 
     if (nullptr == pBuf || bufLen <= PPPoEPktHeaderLen)
     {
@@ -214,7 +206,7 @@ int FramePkt::parsePPPoEPktHeader(const char *pBuf, UInt bufLen,
     return RET_OK;
 }
 
-int FramePkt::parseIpPktHeader(const char *pBuf, UInt bufLen, UInt &headerLen)
+int FramePkt::parseIpPktHeader(const char *pBuf, uint32_t bufLen, uint32_t &headerLen)
 {
     const char *tmpBuf = pBuf;
 
@@ -234,8 +226,8 @@ int FramePkt::parseIpPktHeader(const char *pBuf, UInt bufLen, UInt &headerLen)
 
     mIpProtocol = tmpBuf[9];
 
-    UInt srcIp = 0;
-    UInt destIp = 0;
+    uint32_t srcIp = 0;
+    uint32_t destIp = 0;
 
     tmpBuf += 12;
     memcpy(&srcIp, tmpBuf, 4);
@@ -250,9 +242,9 @@ int FramePkt::parseIpPktHeader(const char *pBuf, UInt bufLen, UInt &headerLen)
     return RET_OK;
 }
 
-int FramePkt::parseUdpPktHeader(const char *pBuf, UInt bufLen, UInt &headerLen)
+int FramePkt::parseUdpPktHeader(const char *pBuf, uint32_t bufLen, uint32_t &headerLen)
 {
-    UInt UdpPktHeaderLen = 8;
+    uint32_t UdpPktHeaderLen = 8;
     const char *tmpBuf = pBuf;
 
     if (NULL == tmpBuf || bufLen < UdpPktHeaderLen)
@@ -262,8 +254,8 @@ int FramePkt::parseUdpPktHeader(const char *pBuf, UInt bufLen, UInt &headerLen)
     }
     headerLen = UdpPktHeaderLen;
 
-    UShort srcPort = 0;
-    UShort destPort = 0;
+    uint16_t srcPort = 0;
+    uint16_t destPort = 0;
 
     memcpy(&srcPort, tmpBuf, 2);
     mId.setSrcPort(ntohs(srcPort));
@@ -277,9 +269,9 @@ int FramePkt::parseUdpPktHeader(const char *pBuf, UInt bufLen, UInt &headerLen)
     return RET_OK;
 }
 
-int FramePkt::parseRtpPktHeader(const char *pBuf, UInt bufLen, UInt &headerLen)
+int FramePkt::parseRtpPktHeader(const char *pBuf, uint32_t bufLen, uint32_t &headerLen)
 {
-    UInt rtpHeaderLen = 0;
+    uint32_t rtpHeaderLen = 0;
     const char *tmpBuf = pBuf;
 
     if (NULL == tmpBuf || 0 == bufLen)
@@ -287,7 +279,7 @@ int FramePkt::parseRtpPktHeader(const char *pBuf, UInt bufLen, UInt &headerLen)
         return RET_ERR;
     }
 
-    UInt rtpVer = (tmpBuf[0] >> 6) & 0x3;
+    uint32_t rtpVer = (tmpBuf[0] >> 6) & 0x3;
     if (rtpVer != 2)
     {
         // cout << "rtp ver err : " << rtpVer << endl;
@@ -295,7 +287,7 @@ int FramePkt::parseRtpPktHeader(const char *pBuf, UInt bufLen, UInt &headerLen)
     }
 
     bool rtpExtensionFlag = tmpBuf[0] & 0x10 ? true : false;
-    UInt csrc = tmpBuf[0] & 0xf;
+    uint32_t csrc = tmpBuf[0] & 0xf;
 
     /** 固定头 */
     rtpHeaderLen = 12 + csrc * 4;
@@ -306,7 +298,7 @@ int FramePkt::parseRtpPktHeader(const char *pBuf, UInt bufLen, UInt &headerLen)
         return RET_ERR;
     }
 
-    UShort seq = 0;
+    uint16_t seq = 0;
     memcpy((void *)&seq, &tmpBuf[2], 2);
     mRtpSeq = ntohs(seq);
     tmpBuf += rtpHeaderLen;
@@ -314,7 +306,7 @@ int FramePkt::parseRtpPktHeader(const char *pBuf, UInt bufLen, UInt &headerLen)
     /** 扩展头 */
     if (rtpExtensionFlag)
     {
-        UShort extensionCnt = 0;
+        uint16_t extensionCnt = 0;
         memcpy((void *)&extensionCnt, &tmpBuf[2], 2);
         extensionCnt = ntohs(extensionCnt);
         // cout << "extensionCnt = " << extensionCnt << endl;
@@ -331,7 +323,7 @@ int FramePkt::parseRtpPktHeader(const char *pBuf, UInt bufLen, UInt &headerLen)
     return RET_OK;
 }
 
-int FramePkt::parseTsData(const char *pBuf, UInt bufLen)
+int FramePkt::parseTsData(const char *pBuf, uint32_t bufLen)
 {
     const char *tmpBuf = pBuf;
 
@@ -370,14 +362,61 @@ int RtpPktManager::RtpPktStream::addRtpPkt(shared_ptr<FramePkt> pkt)
     return RET_OK;
 }
 
+void RtpPktManager::RtpPktStream::sort_pkt()
+{
+    int sort_len = 2000;
+    int sort_step = 1000;
+    int total_len = pktVector.size();
+
+    for (int i = 0; i < total_len; i += sort_step)
+    {
+        vector<shared_ptr<FramePkt>>::iterator it_start = pktVector.begin() + i;
+        vector<shared_ptr<FramePkt>>::iterator it_end = pktVector.end();
+        if (i + sort_len < total_len)
+        {
+            it_end = it_start + sort_len;
+        }
+        std::sort(it_start, it_end,
+                  [](std::shared_ptr<FramePkt> &v1, std::shared_ptr<FramePkt> &v2)
+                  {
+                      int overturn = 20000;
+                      int v1_seq = v1->getRtpSeq();
+                      int v2_seq = v2->getRtpSeq();
+                      if (v1_seq < v2_seq)
+                      {
+                          if (v2_seq - v1_seq < overturn)
+                          {
+                              return true;
+                          }
+                          else
+                          {
+                              return false;
+                          }
+                      }
+                      else
+                      {
+                          if (v1_seq - v2_seq > overturn)
+                          {
+                              return true;
+                          }
+                          else
+                          {
+                              return false;
+                          }
+                      }
+                  });
+    }
+}
+
 void RtpPktManager::RtpPktStream::printfStreamInfo()
 {
     vector<FramePkt *> tmpVector;
-    UShort expectedSeq = 0;
-    UShort curSeq = 0;
-    UShort lastSeq = 0;
-    UInt pktLossCnt = 0;
-    UInt pktErrorCnt = 0;
+    uint16_t expectedSeq = 0;
+    uint16_t curSeq = 0;
+    uint16_t lastSeq = 0;
+    uint32_t pktLossCnt = 0;
+    uint32_t pktErrorCnt = 0;
+    uint32_t pktTotalCnt = 0;
 
     ofstream tsfile(mId.getStrId().append(".ts").c_str(), ofstream::binary);
     ofstream infofile(mId.getStrId().append(".txt").c_str());
@@ -400,6 +439,8 @@ void RtpPktManager::RtpPktStream::printfStreamInfo()
         cout << mId.getStrId().append(".txt") << " create failed" << endl;
     }
 
+    sort_pkt();  // 排序, 处理乱序包
+
     shared_ptr<FramePkt> lastPkt = NULL;
 
     for (auto pkt : pktVector)
@@ -412,7 +453,7 @@ void RtpPktManager::RtpPktStream::printfStreamInfo()
 
             if (curSeq != expectedSeq)
             {
-                UInt curLoss = 0;
+                uint32_t curLoss = 0;
                 if (curSeq > expectedSeq)
                 {
                     curLoss = curSeq - expectedSeq;
@@ -425,33 +466,34 @@ void RtpPktManager::RtpPktStream::printfStreamInfo()
                 /** 200个以内的包认为是重复包 */
                 if (curLoss > (0xffff - 200))
                 {
+                    infofile << "pkt error : "
+                             << "cur seq " << curSeq << ", index " << pkt->getFrameIndex() << " --"
+                             << "last seq " << lastSeq << ", index " << lastPkt->getFrameIndex() << endl;
                     continue;
                 }
 
                 pktLossCnt += curLoss;
+                pktTotalCnt += curLoss;
                 pktErrorCnt++;
                 infofile << "pkt loss : "
-                         << "cur seq " << curSeq << ", index "
-                         << pkt->getFrameIndex() << " --"
-                         << "last seq " << lastSeq << ", index "
-                         << lastPkt->getFrameIndex() << " -- "
+                         << "cur seq " << curSeq << ", index " << pkt->getFrameIndex() << " --"
+                         << "last seq " << lastSeq << ", index " << lastPkt->getFrameIndex() << " -- "
                          << "loss pkt cnt " << curLoss << endl;
             }
         }
+
+        pktTotalCnt += 1;
         pkt->writeToFile(tsfile);
         lastPkt = pkt;
     }
 
     cout << "stream " << mId.getStrId() << " info:" << endl;
-    cout << "pkt total = " << pktVector.size() << " loss = " << pktLossCnt
-         << " err = " << pktErrorCnt << " packet loss probability "
-         << ((double)pktLossCnt / (double)pktVector.size()) * 100 << "%" << '\n'
+    cout << "pkt total = " << pktTotalCnt << " loss = " << pktLossCnt << " err = " << pktErrorCnt
+         << " packet loss probability " << ((double)pktLossCnt / (double)pktTotalCnt) * 100 << "%" << '\n'
          << endl;
 
-    infofile << "pkt total = " << pktVector.size() << " loss = " << pktLossCnt
-             << " err = " << pktErrorCnt << " packet loss probability "
-             << ((double)pktLossCnt / (double)pktVector.size()) * 100 << "%"
-             << endl;
+    infofile << "pkt total = " << pktTotalCnt << " loss = " << pktLossCnt << " err = " << pktErrorCnt
+             << " packet loss probability " << ((double)pktLossCnt / (double)pktTotalCnt) * 100 << "%" << endl;
 
     tsfile.close();
     infofile.close();
@@ -506,7 +548,7 @@ int main(int argc, char *argv[])
     RtpPktManager rtpPktManager;
     PcapFileHeader fileHeader;
     PcapPktHeader pktHeader;
-    UInt pcapSeq = 1;
+    uint32_t pcapSeq = 1;
 
     // shared_ptr<char> spcBuf(new char[65535], [](char *p){delete[] p; cout <<
     // "free sp" << endl;});
@@ -586,9 +628,8 @@ int main(int argc, char *argv[])
         inStream.read(spcBuf.get(), pktHeader.capLen);
         if (inStream)
         {
-            shared_ptr<FramePkt> spPkt(new FramePkt(spcBuf.get(),
-                                                    pktHeader.capLen, pcapSeq++,
-                                                    fileHeader.linkLayerType));
+            shared_ptr<FramePkt> spPkt(
+                new FramePkt(spcBuf.get(), pktHeader.capLen, pcapSeq++, fileHeader.linkLayerType));
 #if DEBUG
             cout << "rtp seq : " << spPkt->getRtpSeq() << endl;
 #endif
