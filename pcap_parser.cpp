@@ -1,4 +1,3 @@
-#include <_types/_uint32_t.h>
 #if 0
 #include <winsock.h>
 #else
@@ -7,9 +6,14 @@
 #endif
 #include <string.h>
 
+#include "cmdline.h"
 #include "pcap_parser.h"
 
 using namespace std;
+
+static bool s_debug_flag = false;
+static uint16_t s_src_port = 0;
+static uint16_t s_dst_port = 0;
 
 string StreamId::getStrId()
 {
@@ -43,7 +47,7 @@ FramePkt::FramePkt(const char *data, uint32_t len, uint32_t index, uint32_t link
     *                0x8864    pppoe session
     *                0x0806    ARP
     *                0x86dd    ipv6
-                                         0x8100    802.1q
+    *                0x8100    802.1q
     *                0xfffa    unknown (broadcast ?)
     */
     if (ret != RET_OK || (mFrameType != 0x800 && mFrameType != 0x8864 && mFrameType != 0x8100))
@@ -53,7 +57,10 @@ FramePkt::FramePkt(const char *data, uint32_t len, uint32_t index, uint32_t link
             return;
         }
 
-        cout << "not ip pkt, type = " << hex << mFrameType << dec << ", index = " << index << endl;
+        if (s_debug_flag)
+        {
+            cout << "not ip pkt, type = " << hex << mFrameType << dec << ", index = " << index << endl;
+        }
         return;
     }
 
@@ -423,7 +430,10 @@ void RtpPktManager::RtpPktStream::printfStreamInfo()
 
     if (tsfile)
     {
-        cout << mId.getStrId().append(".ts") << " create success" << endl;
+        if (s_debug_flag)
+        {
+            cout << mId.getStrId().append(".ts") << " create success" << endl;
+        }
     }
     else
     {
@@ -432,7 +442,10 @@ void RtpPktManager::RtpPktStream::printfStreamInfo()
 
     if (infofile)
     {
-        cout << mId.getStrId().append(".txt") << " create success" << endl;
+        if (s_debug_flag)
+        {
+            cout << mId.getStrId().append(".txt") << " create success" << endl;
+        }
     }
     else
     {
@@ -513,6 +526,12 @@ void RtpPktManager::addRtpPkt(shared_ptr<FramePkt> pkt)
         return;
     }
 
+    if((s_src_port != 0 && pkt->getStreamId().getSrcPort() != s_src_port)
+        || (s_dst_port != 0 && pkt->getStreamId().getDestPort() != s_dst_port))
+    {
+        return;
+    }
+
     /** 遍历已有的stream并add pkt */
     for (auto stream : streamVector)
     {
@@ -550,23 +569,47 @@ int main(int argc, char *argv[])
     PcapPktHeader pktHeader;
     uint32_t pcapSeq = 1;
 
-    // shared_ptr<char> spcBuf(new char[65535], [](char *p){delete[] p; cout <<
-    // "free sp" << endl;});
+    cmdline::parser cmd;
+    cmd.add<string>("srcaddr", 0, "src addr", false, "");
+    cmd.add<string>("dstaddr", 0, "dest addr", false, "");
+    cmd.add<int>("srcport", 0, "src port", false, 0, cmdline::range(1, 65535));
+    cmd.add<int>("dstport", 0, "dest port", false, 0, cmdline::range(1, 65535));
+    cmd.add("debug", 0, "show debug message");
+    cmd.add("help", 0, "print this message");
+    cmd.footer("pcap file name (xxx.pcap)");
+    // cmd.set_program_name("pcap-parser");
 
-    if (argc != 2)
+    bool cmd_ret = cmd.parse(argc, argv);
+
+    if (!cmd_ret)
     {
-        cerr << "usage: ./xxx  xxx.pcap" << endl;
-        return RET_ERR;
+        cout << cmd.error() << endl << cmd.usage() << endl;
+        return -1;
     }
 
-    string filename(argv[1]);
-#if 0
-    if(filename.find_last_not_of(".pcap"))
+    if (cmd.exist("help"))
     {
-        cerr << "input file must pcap format, err:" << filename << endl;
-        return RET_ERR;
+        cout << cmd.usage() << endl;
+        return 0;
     }
-#endif
+
+    if (cmd.rest().size() == 0)
+    {
+        cout << "please input pcap file name!" << endl;
+        cout << cmd.usage() << endl;
+        return -1;
+    }
+
+    if (cmd.exist("debug"))
+    {
+        s_debug_flag = true;
+    }
+
+    s_src_port = cmd.get<int>("srcport");
+    s_dst_port = cmd.get<int>("dstport");
+    cout << "filter src port " << s_src_port << ", dest port " << s_dst_port << endl;
+
+    string filename(cmd.rest()[0]);
 
     ifstream inStream(filename.c_str(), ifstream::binary);
     if (!inStream)
@@ -586,10 +629,10 @@ int main(int argc, char *argv[])
     std::cout << "Read file header successfully." << endl;
     std::cout << hex << "0x" << fileHeader.magic << dec
               << '\n'
-              //<< fileHeader.versionMajor << '\n'
-              //<< fileHeader.versionMinor << '\n'
-              //<< fileHeader.timeZone << '\n'
-              //<< fileHeader.timeStamp << '\n'
+              // << fileHeader.versionMajor << '\n'
+              // << fileHeader.versionMinor << '\n'
+              // << fileHeader.timeZone << '\n'
+              // << fileHeader.timeStamp << '\n'
               << fileHeader.pktMaxLen << '\n'
               << "linkLayerType " << fileHeader.linkLayerType << '\n'
               << endl;

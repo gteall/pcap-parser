@@ -6,4 +6,5 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set (CMAKE_CXX_STANDARD 14)
 
+include_directories("cmdline")
 add_executable(pcap-parser  pcap_parser.cpp)
